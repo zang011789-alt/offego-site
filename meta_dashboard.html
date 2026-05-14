@@ -15,8 +15,8 @@ header {
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 100;
 }
-.logo { font-size: 16px; font-weight: 700; }
-.logo em { color: #7c3aed; font-style: normal; }
+.logo { font-size: 16px; font-weight: 700; color: #fff; }
+.logo em { color: #4ade80; font-style: normal; }
 .header-right { display: flex; align-items: center; gap: 14px; }
 .last-updated { font-size: 12px; color: #6e7681; }
 .refresh-btn {
@@ -84,16 +84,6 @@ header {
 .roas-mid  { color: #e3b341 !important; }
 .roas-bad  { color: #f78166 !important; }
 
-/* BARS */
-.summary-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-.bar-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 16px 18px; }
-.bar-title { font-size: 12px; color: #8b949e; margin-bottom: 12px; }
-.bar-item { margin-bottom: 9px; }
-.bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
-.bar-name { color: #c9d1d9; }
-.bar-val { color: #8b949e; }
-.bar-track { background: #21262d; border-radius: 3px; height: 4px; }
-.bar-fill { height: 4px; border-radius: 3px; transition: width 0.5s ease; }
 
 /* TABLE */
 .table-section { background: #161b22; border: 1px solid #21262d; border-radius: 10px; overflow: hidden; }
@@ -139,7 +129,7 @@ tbody tr:hover td { background: #1c2128; }
 <body>
 
 <header>
-  <div class="logo">리더뮨 <em>광고 대시보드</em></div>
+  <div class="logo"><em>로그린팀</em> 광고 대시보드</div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">—</span>
     <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
@@ -217,18 +207,6 @@ tbody tr:hover td { background: #1c2128; }
       <div class="kpi-label">클릭수</div>
       <div class="kpi-value" id="kpi-clicks">—</div>
       <div class="kpi-sub"  id="kpi-clicks-sub"></div>
-    </div>
-  </div>
-
-  <!-- 비중 바 -->
-  <div class="summary-bars" id="summaryBars">
-    <div class="bar-card">
-      <div class="bar-title">제품별 소진 비중</div>
-      <div id="spendBars"></div>
-    </div>
-    <div class="bar-card">
-      <div class="bar-title">제품별 구매 비중</div>
-      <div id="purchaseBars"></div>
     </div>
   </div>
 
@@ -405,47 +383,11 @@ function render() {
   document.getElementById("kpi-clicks").textContent       = fmtNum(tClick);
   document.getElementById("kpi-clicks-sub").textContent   = "CTR " + ctr.toFixed(2) + "%";
 
-  // 비중 바
-  if (currentProd === "all") {
-    renderBars(allData, tSpend, tPurch);
-    document.getElementById("summaryBars").style.display = "grid";
-  } else {
-    document.getElementById("summaryBars").style.display = "none";
-  }
-
   // 테이블
   document.getElementById("tableTitle").textContent = currentLevel === "ad" ? "소재 상세" : "캠페인 상세";
   renderTable(data);
 }
 
-function renderBars(data, tSpend, tPurch) {
-  const grp = {};
-  data.forEach(c => {
-    const k = c.product.id;
-    if (!grp[k]) grp[k] = { label: c.product.label, color: c.product.color, spend: 0, purch: 0 };
-    grp[k].spend += c.spend;
-    grp[k].purch += c.purchases;
-  });
-  const items = Object.values(grp).sort((a, b) => b.spend - a.spend);
-
-  function barHtml(label, color, val, total, fmt) {
-    const pct = total > 0 ? val / total * 100 : 0;
-    return `<div class="bar-item">
-      <div class="bar-label">
-        <span class="bar-name">${label}</span>
-        <span class="bar-val">${fmt(val)} (${pct.toFixed(1)}%)</span>
-      </div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
-      </div>
-    </div>`;
-  }
-
-  document.getElementById("spendBars").innerHTML =
-    items.map(g => barHtml(g.label, g.color, g.spend, tSpend, fmtKRWFull)).join("");
-  document.getElementById("purchaseBars").innerHTML =
-    items.map(g => barHtml(g.label, g.color, g.purch, tPurch, n => n + "건")).join("");
-}
 
 function renderTable(data) {
   const sorted = [...data].sort((a, b) => {
