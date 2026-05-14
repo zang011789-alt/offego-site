@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리더뮨 광고 대시보드</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0d1117; color: #e2e8f0; font-family: 'Apple SD Gothic Neo', -apple-system, sans-serif; min-height: 100vh; }
+
+/* HEADER */
+header {
+  background: #161b22; border-bottom: 1px solid #21262d;
+  padding: 0 28px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-size: 16px; font-weight: 700; }
+.logo em { color: #7c3aed; font-style: normal; }
+.header-right { display: flex; align-items: center; gap: 14px; }
+.last-updated { font-size: 12px; color: #6e7681; }
+.refresh-btn {
+  background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; gap: 5px; transition: all 0.15s;
+}
+.refresh-btn:hover { background: #30363d; }
+.refresh-btn.loading { opacity: 0.6; pointer-events: none; }
+
+/* CONTAINER */
+.container { max-width: 1440px; margin: 0 auto; padding: 20px 28px; }
+
+/* CONTROLS */
+.controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.ctrl-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.tab-group { display: flex; background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 3px; gap: 2px; }
+.tab-btn {
+  padding: 6px 13px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  color: #6e7681; transition: all 0.15s; border: none; background: none; white-space: nowrap;
+}
+.tab-btn:hover { color: #c9d1d9; }
+.date-group .tab-btn.active { background: #388bfd20; color: #58a6ff; }
+.level-group .tab-btn.active { background: #e3b34120; color: #e3b341; }
+.product-group .tab-btn.active { background: #3fb95020; color: #3fb950; }
+
+/* 날짜 직접입력 */
+.date-range {
+  display: flex; align-items: center; gap: 8px;
+  background: #161b22; border: 1px solid #21262d;
+  border-radius: 8px; padding: 5px 12px;
+}
+.date-range input[type="date"] {
+  background: transparent; border: none; color: #c9d1d9;
+  font-size: 13px; outline: none; cursor: pointer;
+  color-scheme: dark;
+}
+.date-range .sep { color: #4e5564; font-size: 13px; }
+.date-apply {
+  background: #388bfd; border: none; color: #fff;
+  padding: 4px 10px; border-radius: 5px; cursor: pointer;
+  font-size: 12px; font-weight: 600; transition: opacity 0.15s;
+}
+.date-apply:hover { opacity: 0.85; }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 20px; }
+@media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.kpi-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent, #388bfd); opacity: 0.7; }
+.kpi-label { font-size: 11px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 9px; }
+.kpi-value { font-size: 24px; font-weight: 700; color: #f0f6fc; letter-spacing: -0.5px; line-height: 1; }
+.kpi-sub { font-size: 11px; color: #6e7681; margin-top: 5px; }
+
+.kpi-card.spend   { --accent: #388bfd; }
+.kpi-card.purch   { --accent: #3fb950; }
+.kpi-card.roas    { --accent: #a371f7; }
+.kpi-card.cpp     { --accent: #f78166; }
+.kpi-card.impr    { --accent: #e3b341; }
+.kpi-card.clicks  { --accent: #79c0ff; }
+
+.roas-good { color: #3fb950 !important; }
+.roas-mid  { color: #e3b341 !important; }
+.roas-bad  { color: #f78166 !important; }
+
+/* BARS */
+.summary-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.bar-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 16px 18px; }
+.bar-title { font-size: 12px; color: #8b949e; margin-bottom: 12px; }
+.bar-item { margin-bottom: 9px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.bar-name { color: #c9d1d9; }
+.bar-val { color: #8b949e; }
+.bar-track { background: #21262d; border-radius: 3px; height: 4px; }
+.bar-fill { height: 4px; border-radius: 3px; transition: width 0.5s ease; }
+
+/* TABLE */
+.table-section { background: #161b22; border: 1px solid #21262d; border-radius: 10px; overflow: hidden; }
+.table-header-row {
+  padding: 13px 18px; border-bottom: 1px solid #21262d;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.table-title { font-size: 14px; font-weight: 600; color: #f0f6fc; }
+.table-meta { font-size: 12px; color: #6e7681; }
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600;
+  color: #6e7681; text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid #21262d; white-space: nowrap; cursor: pointer; user-select: none;
+}
+th:hover { color: #c9d1d9; }
+td { padding: 10px 14px; font-size: 13px; color: #c9d1d9; border-bottom: 1px solid #161b22; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #1c2128; }
+.cell-name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: #f0f6fc; }
+.cell-sub  { max-width: 200px; overflow: hidden; text-overflow: ellipsis; color: #6e7681; font-size: 11px; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.tag-kd  { background: #0284c720; color: #38bdf8; border: 1px solid #0284c740; }
+.tag-yb  { background: #0d944720; color: #34d399; border: 1px solid #0d944740; }
+.tag-np  { background: #16a34a20; color: #86efac; border: 1px solid #16a34a40; }
+.tag-ato { background: #dc262620; color: #f87171; border: 1px solid #dc262640; }
+.tag-tp  { background: #ea580c20; color: #fb923c; border: 1px solid #ea580c40; }
+
+.total-row td { background: #1c2128 !important; font-weight: 700; color: #f0f6fc; border-top: 1px solid #30363d; }
+.sort-asc::after  { content: ' ↑'; }
+.sort-desc::after { content: ' ↓'; }
+
+/* STATE */
+.state-box { text-align: center; padding: 60px 20px; }
+.spinner { width: 26px; height: 26px; border: 2px solid #21262d; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.state-label { font-size: 14px; color: #6e7681; }
+.error-box { background: #f7816610; border: 1px solid #f7816630; border-radius: 8px; padding: 14px 18px; color: #f78166; font-size: 13px; margin: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">리더뮨 <em>광고 대시보드</em></div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">—</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+      <span id="refreshIcon">↻</span> 새로고침
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- 컨트롤 -->
+  <div class="controls">
+    <!-- 날짜 -->
+    <div class="ctrl-row">
+      <div class="tab-group date-group">
+        <button class="tab-btn" data-preset="today"     onclick="setPreset(this)">오늘</button>
+        <button class="tab-btn" data-preset="yesterday" onclick="setPreset(this)">어제</button>
+        <button class="tab-btn active" data-preset="last_7d"  onclick="setPreset(this)">최근 7일</button>
+        <button class="tab-btn" data-preset="last_14d"  onclick="setPreset(this)">최근 14일</button>
+        <button class="tab-btn" data-preset="last_30d"  onclick="setPreset(this)">최근 30일</button>
+      </div>
+      <div class="date-range">
+        <input type="date" id="startDate">
+        <span class="sep">~</span>
+        <input type="date" id="endDate">
+        <button class="date-apply" onclick="applyCustomDate()">적용</button>
+      </div>
+    </div>
+
+    <!-- 레벨 + 제품 -->
+    <div class="ctrl-row">
+      <div class="tab-group level-group">
+        <button class="tab-btn active" data-level="campaign" onclick="setLevel(this)">캠페인별</button>
+        <button class="tab-btn"        data-level="ad"       onclick="setLevel(this)">소재별</button>
+      </div>
+      <div class="tab-group product-group">
+        <button class="tab-btn active" data-product="all"  onclick="setProduct(this)">전체</button>
+        <button class="tab-btn" data-product="kd"   onclick="setProduct(this)">키즈픽션</button>
+        <button class="tab-btn" data-product="yb"   onclick="setProduct(this)">노즈픽션</button>
+        <button class="tab-btn" data-product="np"   onclick="setProduct(this)">노즈스파</button>
+        <button class="tab-btn" data-product="ato"  onclick="setProduct(this)">아토픽션</button>
+        <button class="tab-btn" data-product="tp"   onclick="setProduct(this)">템퍼픽션</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card spend">
+      <div class="kpi-label">총 소진금액</div>
+      <div class="kpi-value" id="kpi-spend">—</div>
+      <div class="kpi-sub"  id="kpi-spend-sub"></div>
+    </div>
+    <div class="kpi-card purch">
+      <div class="kpi-label">구매 수</div>
+      <div class="kpi-value" id="kpi-purchases">—</div>
+      <div class="kpi-sub"  id="kpi-purch-sub"></div>
+    </div>
+    <div class="kpi-card roas">
+      <div class="kpi-label">ROAS</div>
+      <div class="kpi-value" id="kpi-roas">—</div>
+      <div class="kpi-sub"  id="kpi-roas-sub"></div>
+    </div>
+    <div class="kpi-card cpp">
+      <div class="kpi-label">구매당 비용 (CPP)</div>
+      <div class="kpi-value" id="kpi-cpp">—</div>
+      <div class="kpi-sub"  id="kpi-cpp-sub"></div>
+    </div>
+    <div class="kpi-card impr">
+      <div class="kpi-label">노출수</div>
+      <div class="kpi-value" id="kpi-impressions">—</div>
+      <div class="kpi-sub"  id="kpi-impr-sub"></div>
+    </div>
+    <div class="kpi-card clicks">
+      <div class="kpi-label">클릭수</div>
+      <div class="kpi-value" id="kpi-clicks">—</div>
+      <div class="kpi-sub"  id="kpi-clicks-sub"></div>
+    </div>
+  </div>
+
+  <!-- 비중 바 -->
+  <div class="summary-bars" id="summaryBars">
+    <div class="bar-card">
+      <div class="bar-title">제품별 소진 비중</div>
+      <div id="spendBars"></div>
+    </div>
+    <div class="bar-card">
+      <div class="bar-title">제품별 구매 비중</div>
+      <div id="purchaseBars"></div>
+    </div>
+  </div>
+
+  <!-- 테이블 -->
+  <div class="table-section">
+    <div class="table-header-row">
+      <span class="table-title" id="tableTitle">캠페인 상세</span>
+      <span class="table-meta"  id="tableMeta"></span>
+    </div>
+    <div id="tableContent">
+      <div class="state-box"><div class="spinner"></div><div class="state-label">불러오는 중...</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TOKEN      = "EAAiMnim7RA4BRVp3D04gFml7FMKFWlod9kXmXyxF7kMhCgZCSuJxZBnB1AZAU2JMeM6kFjagZASS0Qg4oLXBsO7zoFP9lqbQkSa3bb9dlcURZATOlSgl4apiLhUtCv3MEmwxhI8B5YMVPEcqVwHhKWUD8RDA1cRd0RZA1PaFja5Ye3PC5Ak7jhiFkQPQZAl";
+const ACCOUNT_ID = "act_1298784661243955";
+
+// ── 제품 분류 ──
+const PRODUCTS = [
+  { id: "kd",  label: "키즈픽션", color: "#38bdf8", re: /kd/i  },
+  { id: "yb",  label: "노즈픽션", color: "#34d399", re: /yb/i  },
+  { id: "np",  label: "노즈스파",  color: "#86efac", re: /np/i  },
+  { id: "ato", label: "아토픽션", color: "#f87171", re: /ato/i },
+  { id: "tp",  label: "템퍼픽션", color: "#fb923c", re: /tp/i  },
+];
+
+function classify(name) {
+  for (const p of PRODUCTS) if (p.re.test(name)) return p;
+  return null;
+}
+
+// ── 상태 ──
+let dateConfig   = { preset: "last_7d" };
+let currentLevel = "campaign";
+let currentProd  = "all";
+let allData      = [];
+let sortKey      = "spend";
+let sortDir      = -1;
+
+// ── 날짜 초기값 ──
+(function () {
+  const today = new Date();
+  const fmt = d => d.toISOString().slice(0, 10);
+  const d7  = new Date(today); d7.setDate(today.getDate() - 7);
+  document.getElementById("endDate").value   = fmt(today);
+  document.getElementById("startDate").value = fmt(d7);
+})();
+
+// ── 포맷 ──
+function fmtKRW(n) { return Math.round(n).toLocaleString("ko-KR"); }
+function fmtKRWFull(n) { return fmtKRW(n); }
+function fmtNum(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+  if (n >= 1000)    return (n / 1000).toFixed(1)    + "K";
+  return n.toLocaleString();
+}
+function roasCls(v) { return v >= 2 ? "roas-good" : v >= 1 ? "roas-mid" : "roas-bad"; }
+
+// ── API 호출 ──
+async function fetchInsights() {
+  const fields = currentLevel === "campaign"
+    ? "campaign_name,spend,impressions,clicks,ctr,cpc,actions,purchase_roas"
+    : "ad_name,adset_name,campaign_name,spend,impressions,clicks,ctr,cpc,actions,purchase_roas";
+
+  const url = new URL(`https://graph.facebook.com/v21.0/${ACCOUNT_ID}/insights`);
+  url.searchParams.set("access_token", TOKEN);
+  url.searchParams.set("fields", fields);
+  url.searchParams.set("level", currentLevel);
+  url.searchParams.set("limit", "500");
+
+  if (dateConfig.preset) {
+    url.searchParams.set("date_preset", dateConfig.preset);
+  } else {
+    url.searchParams.set("time_range", JSON.stringify({ since: dateConfig.since, until: dateConfig.until }));
+  }
+
+  const res  = await fetch(url.toString());
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+
+  // 페이지네이션 처리
+  let rows = json.data || [];
+  let next = json.paging?.next;
+  while (next) {
+    const r = await fetch(next);
+    const j = await r.json();
+    rows = rows.concat(j.data || []);
+    next = j.paging?.next;
+  }
+
+  return rows.flatMap(c => {
+    const campName = c.campaign_name || "";
+    const product  = classify(campName);
+    if (!product) return [];
+
+    const spend     = parseFloat(c.spend || 0);
+    const purchases = parseInt((c.actions || []).find(a => a.action_type === "purchase")?.value || 0);
+    const roas      = parseFloat((c.purchase_roas || [])[0]?.value || 0);
+    const clicks    = parseInt(c.clicks || 0);
+    const cpa       = purchases > 0 ? spend / purchases : 0;
+    const cpc_val   = parseFloat(c.cpc || 0) || (clicks > 0 ? spend / clicks : 0);
+    const revenue   = spend * roas;
+    const cvr       = clicks > 0 ? purchases / clicks * 100 : 0;
+
+    return [{
+      name:        currentLevel === "ad" ? (c.ad_name || "—") : campName,
+      parent:      currentLevel === "ad" ? campName : "",
+      product,
+      spend, purchases, roas, cpa, cpc_val, revenue, cvr,
+      impressions: parseInt(c.impressions || 0),
+      clicks,
+      ctr:         parseFloat(c.ctr || 0),
+    }];
+  });
+}
+
+async function loadData() {
+  const btn = document.getElementById("refreshBtn");
+  btn.classList.add("loading");
+  document.getElementById("refreshIcon").textContent = "⟳";
+  document.getElementById("tableContent").innerHTML =
+    `<div class="state-box"><div class="spinner"></div><div class="state-label">메타 API에서 불러오는 중...</div></div>`;
+
+  try {
+    allData = await fetchInsights();
+    document.getElementById("lastUpdated").textContent =
+      "업데이트: " + new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    render();
+  } catch (e) {
+    document.getElementById("tableContent").innerHTML =
+      `<div class="error-box">❌ ${e.message}</div>`;
+  } finally {
+    btn.classList.remove("loading");
+    document.getElementById("refreshIcon").textContent = "↻";
+  }
+}
+
+// ── 렌더 ──
+function filtered() {
+  if (currentProd === "all") return allData;
+  return allData.filter(c => c.product.id === currentProd);
+}
+
+function render() {
+  const data = filtered();
+  let tSpend = 0, tPurch = 0, tImpr = 0, tClick = 0, tWRoas = 0;
+  data.forEach(c => {
+    tSpend  += c.spend;
+    tPurch  += c.purchases;
+    tImpr   += c.impressions;
+    tClick  += c.clicks;
+    tWRoas  += c.roas * c.spend;
+  });
+  const avgRoas = tSpend > 0 ? tWRoas / tSpend : 0;
+  const cpp     = tPurch  > 0 ? tSpend / tPurch : 0;
+  const ctr     = tImpr   > 0 ? (tClick / tImpr * 100) : 0;
+
+  // KPI
+  document.getElementById("kpi-spend").textContent        = fmtKRWFull(tSpend);
+  document.getElementById("kpi-spend-sub").textContent    = data.length + "개 " + (currentLevel === "ad" ? "소재" : "캠페인");
+  document.getElementById("kpi-purchases").textContent    = tPurch.toLocaleString() + "건";
+  document.getElementById("kpi-purch-sub").textContent    = "전환율 " + (tClick > 0 ? (tPurch / tClick * 100).toFixed(2) : 0) + "%";
+  document.getElementById("kpi-roas").textContent         = (avgRoas * 100).toFixed(0) + "%";
+  document.getElementById("kpi-roas").className           = "kpi-value " + roasCls(avgRoas);
+  document.getElementById("kpi-roas-sub").textContent     = avgRoas >= 1 ? "광고비 회수 중" : "⚠ 광고비 미회수";
+  document.getElementById("kpi-cpp").textContent          = cpp > 0 ? fmtKRWFull(cpp) : "—";
+  document.getElementById("kpi-cpp-sub").textContent      = "구매 " + tPurch + "건 기준";
+  document.getElementById("kpi-impressions").textContent  = fmtNum(tImpr);
+  document.getElementById("kpi-impr-sub").textContent     = "CTR " + ctr.toFixed(2) + "%";
+  document.getElementById("kpi-clicks").textContent       = fmtNum(tClick);
+  document.getElementById("kpi-clicks-sub").textContent   = "CTR " + ctr.toFixed(2) + "%";
+
+  // 비중 바
+  if (currentProd === "all") {
+    renderBars(allData, tSpend, tPurch);
+    document.getElementById("summaryBars").style.display = "grid";
+  } else {
+    document.getElementById("summaryBars").style.display = "none";
+  }
+
+  // 테이블
+  document.getElementById("tableTitle").textContent = currentLevel === "ad" ? "소재 상세" : "캠페인 상세";
+  renderTable(data);
+}
+
+function renderBars(data, tSpend, tPurch) {
+  const grp = {};
+  data.forEach(c => {
+    const k = c.product.id;
+    if (!grp[k]) grp[k] = { label: c.product.label, color: c.product.color, spend: 0, purch: 0 };
+    grp[k].spend += c.spend;
+    grp[k].purch += c.purchases;
+  });
+  const items = Object.values(grp).sort((a, b) => b.spend - a.spend);
+
+  function barHtml(label, color, val, total, fmt) {
+    const pct = total > 0 ? val / total * 100 : 0;
+    return `<div class="bar-item">
+      <div class="bar-label">
+        <span class="bar-name">${label}</span>
+        <span class="bar-val">${fmt(val)} (${pct.toFixed(1)}%)</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("spendBars").innerHTML =
+    items.map(g => barHtml(g.label, g.color, g.spend, tSpend, fmtKRWFull)).join("");
+  document.getElementById("purchaseBars").innerHTML =
+    items.map(g => barHtml(g.label, g.color, g.purch, tPurch, n => n + "건")).join("");
+}
+
+function renderTable(data) {
+  const sorted = [...data].sort((a, b) => {
+    const av = a[sortKey] ?? 0, bv = b[sortKey] ?? 0;
+    return sortDir * (typeof av === "string" ? av.localeCompare(bv) : av - bv);
+  });
+
+  document.getElementById("tableMeta").textContent = sorted.length + "개";
+
+  const col = (key, label) => {
+    const cls = sortKey === key ? (sortDir === 1 ? "sort-asc" : "sort-desc") : "";
+    return `<th class="${cls}" onclick="sortBy('${key}')">${label}</th>`;
+  };
+
+  const isAd = currentLevel === "ad";
+
+  // 컬럼 정의
+  // 소재별: 소재명, 캠페인, CPA, 광고비, ROAS, 매출, 구매수, CPC, CTR, CVR, 제품
+  // 캠페인별: 캠페인명, 제품, ROAS, CPA, 광고비, 매출, 구매수, CPC, CTR, CVR
+  let html = `<table><thead><tr>`;
+  if (isAd) {
+    html += `
+      ${col("name",      "소재명")}
+      ${col("parent",    "캠페인")}
+      ${col("cpa",       "CPA")}
+      ${col("spend",     "광고비")}
+      ${col("roas",      "ROAS")}
+      ${col("revenue",   "매출")}
+      ${col("purchases", "구매수")}
+      ${col("cpc_val",   "CPC")}
+      ${col("ctr",       "CTR")}
+      ${col("cvr",       "CVR")}
+      <th>제품</th>`;
+  } else {
+    html += `
+      ${col("name",      "캠페인명")}
+      <th>제품</th>
+      ${col("cpa",       "CPA")}
+      ${col("spend",     "광고비")}
+      ${col("roas",      "ROAS")}
+      ${col("revenue",   "매출")}
+      ${col("purchases", "구매수")}
+      ${col("cpc_val",   "CPC")}
+      ${col("ctr",       "CTR")}
+      ${col("cvr",       "CVR")}`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  let tSpend = 0, tPurch = 0, tImpr = 0, tClick = 0, tWRoas = 0, tRevenue = 0;
+
+  sorted.forEach(c => {
+    tSpend   += c.spend;
+    tPurch   += c.purchases;
+    tImpr    += c.impressions;
+    tClick   += c.clicks;
+    tWRoas   += c.roas * c.spend;
+    tRevenue += c.revenue;
+
+    const roasPct = c.roas > 0 ? (c.roas * 100).toFixed(0) + "%" : "—";
+    const cvrFmt  = c.cvr  > 0 ? c.cvr.toFixed(2) + "%" : "—";
+    const cpcFmt  = c.cpc_val > 0 ? fmtKRWFull(c.cpc_val) : "—";
+
+    if (isAd) {
+      html += `<tr>
+        <td class="cell-name" title="${c.name}">${c.name}</td>
+        <td class="cell-sub"  title="${c.parent}">${c.parent}</td>
+        <td>${c.cpa > 0 ? fmtKRWFull(c.cpa) : "—"}</td>
+        <td>${fmtKRWFull(c.spend)}</td>
+        <td class="${roasCls(c.roas)}">${roasPct}</td>
+        <td>${c.revenue > 0 ? fmtKRWFull(c.revenue) : "—"}</td>
+        <td>${c.purchases > 0 ? c.purchases.toLocaleString() : "—"}</td>
+        <td>${cpcFmt}</td>
+        <td>${c.ctr.toFixed(2)}%</td>
+        <td>${cvrFmt}</td>
+        <td><span class="tag tag-${c.product.id}">${c.product.label}</span></td>
+      </tr>`;
+    } else {
+      html += `<tr>
+        <td class="cell-name" title="${c.name}">${c.name}</td>
+        <td><span class="tag tag-${c.product.id}">${c.product.label}</span></td>
+        <td>${c.cpa > 0 ? fmtKRWFull(c.cpa) : "—"}</td>
+        <td>${fmtKRWFull(c.spend)}</td>
+        <td class="${roasCls(c.roas)}">${roasPct}</td>
+        <td>${c.revenue > 0 ? fmtKRWFull(c.revenue) : "—"}</td>
+        <td>${c.purchases > 0 ? c.purchases.toLocaleString() : "—"}</td>
+        <td>${cpcFmt}</td>
+        <td>${c.ctr.toFixed(2)}%</td>
+        <td>${cvrFmt}</td>
+      </tr>`;
+    }
+  });
+
+  const tRoas  = tSpend  > 0 ? tWRoas / tSpend : 0;
+  const tCpa   = tPurch  > 0 ? tSpend / tPurch : 0;
+  const tCpc   = tClick  > 0 ? tSpend / tClick : 0;
+  const tCtr   = tImpr   > 0 ? (tClick / tImpr * 100) : 0;
+  const tCvr   = tClick  > 0 ? (tPurch / tClick * 100) : 0;
+  const tRoasPct = (tRoas * 100).toFixed(0) + "%";
+
+  if (isAd) {
+    html += `<tr class="total-row">
+      <td>합계 (${sorted.length}개)</td>
+      <td>—</td>
+      <td>${tCpa > 0 ? fmtKRWFull(tCpa) : "—"}</td>
+      <td>${fmtKRWFull(tSpend)}</td>
+      <td class="${roasCls(tRoas)}">${tRoasPct}</td>
+      <td>${fmtKRWFull(tRevenue)}</td>
+      <td>${tPurch.toLocaleString()}</td>
+      <td>${tCpc > 0 ? fmtKRWFull(tCpc) : "—"}</td>
+      <td>${tCtr.toFixed(2)}%</td>
+      <td>${tCvr.toFixed(2)}%</td>
+      <td>—</td>
+    </tr>`;
+  } else {
+    html += `<tr class="total-row">
+      <td>합계 (${sorted.length}개)</td>
+      <td>—</td>
+      <td>${tCpa > 0 ? fmtKRWFull(tCpa) : "—"}</td>
+      <td>${fmtKRWFull(tSpend)}</td>
+      <td class="${roasCls(tRoas)}">${tRoasPct}</td>
+      <td>${fmtKRWFull(tRevenue)}</td>
+      <td>${tPurch.toLocaleString()}</td>
+      <td>${tCpc > 0 ? fmtKRWFull(tCpc) : "—"}</td>
+      <td>${tCtr.toFixed(2)}%</td>
+      <td>${tCvr.toFixed(2)}%</td>
+    </tr>`;
+  }
+
+  html += "</tbody></table>";
+  document.getElementById("tableContent").innerHTML = html;
+}
+
+// ── 이벤트 ──
+function sortBy(key) {
+  sortDir = sortKey === key ? sortDir * -1 : -1;
+  sortKey = key;
+  render();
+}
+
+function setPreset(btn) {
+  document.querySelectorAll(".date-group .tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  dateConfig = { preset: btn.dataset.preset };
+  loadData();
+}
+
+function applyCustomDate() {
+  const s = document.getElementById("startDate").value;
+  const e = document.getElementById("endDate").value;
+  if (!s || !e) return;
+  document.querySelectorAll(".date-group .tab-btn").forEach(b => b.classList.remove("active"));
+  dateConfig = { since: s, until: e };
+  loadData();
+}
+
+function setLevel(btn) {
+  document.querySelectorAll(".level-group .tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  currentLevel = btn.dataset.level;
+  loadData();
+}
+
+function setProduct(btn) {
+  document.querySelectorAll(".product-group .tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  currentProd = btn.dataset.product;
+  render();
+}
+
+loadData();
+</script>
+</body>
+</html>
